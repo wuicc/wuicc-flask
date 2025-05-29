@@ -1,0 +1,12 @@
+{
+    "languages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant",
+        "ja"
+    ],
+    "mihoyo-language-map": {
+        "zh-Hans": "zh-cn",
+        "zh-Hant": "zh-tw"
+    }
+}

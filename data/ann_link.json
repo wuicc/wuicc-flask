@@ -1,0 +1,18 @@
+{
+    "genshin": {
+        "annListApi": "https://hk4e-api.mihoyo.com/common/hk4e_cn/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_cn&lang={lang}&bundle_id=hk4e_cn&level=1&platform=pc&region=cn_gf01&uid=1",
+        "annContentApi": "https://hk4e-api.mihoyo.com/common/hk4e_cn/announcement/api/getAnnContent?game=hk4e&game_biz=hk4e_cn&lang={lang}&bundle_id=hk4e_cn&level=1&platform=pc&region=cn_gf01&uid=1"
+    },
+    "starrail": {
+        "annListApi": "https://hkrpg-api.mihoyo.com/common/hkrpg_cn/announcement/api/getAnnList?game=hkrpg&game_biz=hkrpg_cn&lang={lang}&bundle_id=hkrpg_cn&level=1&platform=pc&region=prod_gf_cn&uid=1",
+        "annContentApi": "https://hkrpg-api.mihoyo.com/common/hkrpg_cn/announcement/api/getAnnContent?game=hkrpg&game_biz=hkrpg_cn&lang={lang}&bundle_id=hkrpg_cn&level=1&platform=pc&region=prod_gf_cn&uid=1"
+    },
+    "zenless": {
+        "annListApi": "https://announcement-api.mihoyo.com/common/nap_cn/announcement/api/getAnnList?game=nap&game_biz=nap_cn&lang={lang}&bundle_id=nap_cn&level=1&platform=pc&region=prod_gf_cn&uid=1",
+        "annContentApi": "https://announcement-api.mihoyo.com/common/nap_cn/announcement/api/getAnnContent?game=nap&game_biz=nap_cn&lang={lang}&bundle_id=nap_cn&level=1&platform=pc&region=prod_gf_cn&uid=1"
+    },
+    "wuthering": {
+        "annListApi": "https://aki-gm-resources-back.aki-game.com/gamenotice/G152/76402e5b20be2c39f095a152090afddc/notice.json",
+        "annContentApi": null
+    }
+}

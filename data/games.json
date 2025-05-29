@@ -1,0 +1,253 @@
+{
+  "games": [
+    {
+      "game_id": "genshin",
+      "name": {
+        "zh-Hans": "原神",
+        "zh-Hant": "原神",
+        "en": "Genshin Impact",
+        "ja": "原神"
+      },
+      "developer": "mihoyo",
+      "color": "#a068f8",
+      "icon": "/assets/games/genshin/icon.webp",
+      "activities": {
+        "version": {
+          "name": {
+            "zh-Hans": "版本信息",
+            "zh-Hant": "版本信息",
+            "en": "Version",
+            "ja": "バージョン"
+          },
+          "default": true,
+          "icon": "mdi-numeric"
+        },
+        "event": {
+          "name": {
+            "zh-Hans": "普通活动",
+            "zh-Hant": "普通活動",
+            "en": "Event",
+            "ja": "限定イベント"
+          },
+          "default": true,
+          "icon": "mdi-calendar-star"
+        },
+        "gacha": {
+          "name": {
+            "zh-Hans": "限时祈愿",
+            "zh-Hant": "限時祈愿",
+            "en": "Wish",
+            "ja": "イベント祈願"
+          },
+          "default": true,
+          "icon": "mdi-crystal-ball"
+        },
+        "challenge": {
+          "name": {
+            "zh-Hans": "周期挑战",
+            "zh-Hant": "週期挑戰",
+            "en": "Challenge",
+            "ja": "限定チャレンジ"
+          },
+          "default": false,
+          "icon": "mdi-sword-cross"
+        }
+      },
+      "activities_type_list": [
+        "version",
+        "event",
+        "gacha",
+        "challenge"
+      ]
+    },
+    {
+      "game_id": "starrail",
+      "name": {
+        "zh-Hans": "崩坏：星穹铁道",
+        "zh-Hant": "崩壞：星穹鐵道",
+        "en": "Honkai: Star Rail",
+        "ja": "崩壊：スターレイル"
+      },
+      "developer": "mihoyo",
+      "color": "#e0a064",
+      "icon": "/assets/games/starrail/icon.webp",
+      "activities": {
+        "version": {
+          "name": {
+            "zh-Hans": "版本信息",
+            "zh-Hant": "版本信息",
+            "en": "Version",
+            "ja": "アップデート"
+          },
+          "default": true,
+          "icon": "mdi-update"
+        },
+        "event": {
+          "name": {
+            "zh-Hans": "普通活动",
+            "zh-Hant": "普通活動",
+            "en": "Event",
+            "ja": "限定イベント"
+          },
+          "default": true,
+          "icon": "mdi-calendar-star"
+        },
+        "gacha": {
+          "name": {
+            "zh-Hans": "限时跃迁",
+            "zh-Hant": "限時躍遷",
+            "en": "Warp",
+            "ja": "イベント跳躍"
+          },
+          "default": true,
+          "icon": "mdi-crystal-ball"
+        },
+        "challenge": {
+          "name": {
+            "zh-Hans": "周期挑战",
+            "zh-Hant": "週期挑戰",
+            "en": "Challenge",
+            "ja": "限定チャレンジ"
+          },
+          "default": false,
+          "icon": "mdi-sword-cross"
+        }
+      },
+      "activities_type_list": [
+        "version",
+        "event",
+        "gacha",
+        "challenge"
+      ]
+    },
+    {
+      "game_id": "zenless",
+      "name": {
+        "zh-Hans": "绝区零",
+        "zh-Hant": "絕區零",
+        "en": "Zenless Zone Zero",
+        "ja": "ゼンレスゾーンゼロ"
+      },
+      "developer": "mihoyo",
+      "color": "#4caf50",
+      "icon": "/assets/games/zenless/icon.webp",
+      "activities": {
+        "version": {
+          "name": {
+            "zh-Hans": "版本信息",
+            "zh-Hant": "版本信息",
+            "en": "Version",
+            "ja": "アップデート"
+          },
+          "default": true,
+          "icon": "mdi-update"
+        },
+        "event": {
+          "name": {
+            "zh-Hans": "普通活动",
+            "zh-Hant": "普通活動",
+            "en": "Event",
+            "ja": "限定イベント"
+          },
+          "default": true,
+          "icon": "mdi-calendar-star"
+        },
+        "gacha": {
+          "name": {
+            "zh-Hans": "限时调频",
+            "zh-Hant": "限時調頻",
+            "en": "Signal",
+            "ja": "イベント変調"
+          },
+          "default": true,
+          "icon": "mdi-crystal-ball"
+        },
+        "challenge": {
+          "name": {
+            "zh-Hans": "周期挑战",
+            "zh-Hant": "週期挑戰",
+            "en": "Challenge",
+            "ja": "限定チャレンジ"
+          },
+          "default": false,
+          "icon": "mdi-sword-cross"
+        }
+      },
+      "activities_type_list": [
+        "version",
+        "event",
+        "gacha",
+        "challenge"
+      ]
+    },
+    {
+      "game_id": "wuthering",
+      "name": {
+        "zh-Hans": "鸣潮",
+        "zh-Hant": "鳴潮",
+        "en": "Wuthering Waves",
+        "ja": "鳴潮"
+      },
+      "developer": "kuro",
+      "color": "#18a0e8",
+      "icon": "/assets/games/wuthering/icon.webp",
+      "activities": {
+        "version": {
+          "name": {
+            "zh-Hans": "版本信息",
+            "zh-Hant": "版本信息",
+            "en": "Version",
+            "ja": "アップデート"
+          },
+          "default": true,
+          "icon": "mdi-update"
+        },
+        "event": {
+          "name": {
+            "zh-Hans": "普通活动",
+            "zh-Hant": "普通活動",
+            "en": "Event",
+            "ja": "限定イベント"
+          },
+          "default": true,
+          "icon": "mdi-calendar-star"
+        },
+        "gacha": {
+          "name": {
+            "zh-Hans": "限时唤取",
+            "zh-Hant": "限時唤取",
+            "en": "Convene",
+            "ja": "集音"
+          },
+          "default": true,
+          "icon": "mdi-crystal-ball"
+        },
+        "challenge": {
+          "name": {
+            "zh-Hans": "周期挑战",
+            "zh-Hant": "週期挑戰",
+            "en": "Challenge",
+            "ja": "限定チャレンジ"
+          },
+          "default": false,
+          "icon": "mdi-sword-cross"
+        }
+      },
+      "activities_type_list": [
+        "version",
+        "event",
+        "gacha",
+        "challenge"
+      ]
+    }
+  ],
+  "meta": {
+    "lastUpdated": "2025-05-28 17:46:58",
+    "schemaVersion": "100",
+    "defaultActivities": [
+      "version",
+      "event",
+      "gacha"
+    ]
+  }
+}
