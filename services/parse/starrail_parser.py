@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 class StarRailParser:
     """崩坏：星穹铁道(Star Rail)公告解析器（国际化版）"""
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=True):
         self.version_now = "1.0"
         self.version_begin_time = ""
         self.supported_languages = ["zh-cn", "zh-tw", "en", "ja", "ko"]
@@ -334,7 +334,8 @@ class StarRailParser:
                         "bannerImage": banner_image,
                         "event_type": "event",
                         "content": json.dumps(
-                            raw_data["pic_content_map"].get(ann_id, {}), ensure_ascii=False
+                            raw_data["pic_content_map"].get(ann_id, {}),
+                            ensure_ascii=False,
                         ),
                         "lang": lang,
                     }
@@ -432,7 +433,8 @@ class StarRailParser:
                         "bannerImage": banner_image,
                         "event_type": "gacha",
                         "content": json.dumps(
-                            raw_data["pic_content_map"].get(ann_id, {}), ensure_ascii=False
+                            raw_data["pic_content_map"].get(ann_id, {}),
+                            ensure_ascii=False,
                         ),
                         "lang": lang,
                     }
@@ -454,7 +456,9 @@ class StarRailParser:
         self._debug_print("使用中文内容解析跃迁信息...")
 
         # 提取跃迁名称
-        gacha_names = re.findall(r"<h1[^>]*>「([^」]+)」[^<]*活动跃迁</h1>", html_content)
+        gacha_names = re.findall(
+            r"<h1[^>]*>「([^」]+)」[^<]*活动跃迁</h1>", html_content
+        )
         self._debug_print(f"从HTML提取的跃迁名称: {gacha_names}")
 
         # 过滤角色跃迁名称
@@ -538,61 +542,106 @@ class StarRailParser:
     def _get_time_from_zh_content(
         self, announcement: Dict, zh_content: Dict
     ) -> Tuple[str, str]:
-        """从中文公告内容中提取时间信息"""
+        """从中文公告内容中提取时间信息（改进版）"""
         if not zh_content or not isinstance(zh_content, dict):
             self._debug_print("无中文内容或内容格式错误")
             return "", ""
 
-        # 获取公告中的时间
+        # 获取公告中的原始时间
         start_time = self._timestamp_to_datetime(announcement.get("start_time", ""))
         end_time = self._timestamp_to_datetime(announcement.get("end_time", ""))
         self._debug_print(f"公告原始时间: {start_time} 至 {end_time}")
 
-        # 尝试从中文内容中提取更准确的时间
+        # 判断是否是跃迁公告
+        is_gacha = "跃迁" in zh_content.get("title", "")
+
+        # 从HTML内容中提取更准确的时间
         if "content" in zh_content:
-            self._debug_print("尝试从中文HTML内容中提取时间")
-            soup = BeautifulSoup(zh_content["content"], "html.parser")
+            html_content = zh_content["content"]
 
-            # 查找时间表格
-            time_table = soup.find("table")
-            if time_table:
-                self._debug_print("找到时间表格")
-                rows = time_table.find_all("tr")
-                if len(rows) >= 2:
-                    time_row = rows[1]
-                    cells = time_row.find_all("td")
-                    if len(cells) >= 2:
-                        time_range = cells[1].get_text(strip=True)
-                        self._debug_print(f"从表格中提取的时间范围: {time_range}")
-
-                        if "~" in time_range:
-                            content_start = time_range.split("~")[0].strip()
-                            content_end = time_range.split("~")[1].strip()
-                            self._debug_print(
-                                f"拆分时间: 开始={content_start}, 结束={content_end}"
-                            )
-
-                            # 如果内容时间包含版本号，使用版本开始时间
-                            if f"{self.version_now}版本" in content_start:
-                                self._debug_print(
-                                    "检测到版本时间引用，使用版本开始时间"
-                                )
-                                parsed_start = self.version_begin_time
-                            else:
-                                parsed_start = self._parse_content_time(content_start)
-
-                            parsed_end = self._parse_content_time(content_end)
-
-                            if parsed_start:
-                                start_time = parsed_start
-                                self._debug_print(f"更新开始时间为: {start_time}")
-                            if parsed_end:
-                                end_time = parsed_end
-                                self._debug_print(f"更新结束时间为: {end_time}")
+            if is_gacha:
+                # 跃迁公告时间提取
+                extracted_time = self._extract_sr_gacha_time(html_content)
             else:
-                self._debug_print("未找到时间表格")
+                # 活动公告时间提取
+                extracted_time = self._extract_sr_event_time(html_content)
+
+            if extracted_time:
+                start_time = extracted_time
+
+                # 对于活动公告，尝试提取结束时间
+                if not is_gacha:
+                    end_time_part = self._extract_sr_event_end_time(html_content)
+                    if end_time_part:
+                        end_time = self._format_extracted_time(end_time_part)
+
+        # 处理版本更新后的特殊情况
+        if f"{self.version_now}版本" in start_time or "版本更新后" in start_time:
+            start_time = self.version_begin_time
+            self._debug_print("检测到版本时间引用，使用版本开始时间")
 
         return start_time, end_time
+
+    def _extract_sr_event_time(self, html_content: str) -> str:
+        """从活动公告HTML内容中提取开始时间"""
+        pattern = r"<h1[^>]*>(?:活动时间|限时活动期)</h1>\s*<p[^>]*>(.*?)</p>"
+        match = re.search(pattern, html_content, re.DOTALL)
+        self._debug_print(f"活动时间提取结果: {match}")
+
+        if match:
+            time_info = match.group(1)
+            cleaned_time_info = re.sub("&lt;.*?&gt;", "", time_info)
+            if "-" in cleaned_time_info:
+                return cleaned_time_info.split("-")[0].strip()
+            return cleaned_time_info
+        return ""
+
+    def _extract_sr_event_end_time(self, html_content: str) -> str:
+        """从活动公告HTML内容中提取结束时间"""
+        pattern = r"<h1[^>]*>(?:活动时间|限时活动期)</h1>\s*<p[^>]*>(.*?)</p>"
+        match = re.search(pattern, html_content, re.DOTALL)
+
+        if match:
+            time_info = match.group(1)
+            cleaned_time_info = re.sub("&lt;.*?&gt;", "", time_info)
+            if "-" in cleaned_time_info:
+                return cleaned_time_info.split("-")[1].strip()
+        return ""
+
+    def _extract_sr_gacha_time(self, html_content: str) -> str:
+        """从跃迁公告HTML内容中提取时间"""
+        pattern = r"时间为(.*?)，包含如下内容"
+        matches = re.findall(pattern, html_content)
+        self._debug_print(f"跃迁时间提取结果: {matches}")
+
+        if matches:
+            time_range = re.sub("&lt;.*?&gt;", "", matches[0].strip())
+            if "-" in time_range:
+                return time_range.split("-")[0].strip()
+            return time_range
+        return ""
+
+    def _format_extracted_time(self, time_str: str) -> str:
+        """格式化提取到的时间字符串"""
+        if not time_str:
+            return ""
+
+        # 处理特殊时间格式
+        time_str = time_str.replace("年", "/").replace("月", "/").replace("日", "")
+        time_str = re.sub(r"[^\d/ :]", "", time_str).strip()
+
+        try:
+            # 尝试解析格式 "2023/11/15 10:00:00"
+            date_obj = datetime.strptime(time_str, "%Y/%m/%d %H:%M:%S")
+            return date_obj.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                # 尝试解析没有秒数的格式 "2023/11/15 10:00"
+                date_obj = datetime.strptime(time_str, "%Y/%m/%d %H:%M")
+                return date_obj.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                self._debug_print(f"时间格式解析失败: {time_str}")
+                return ""
 
     def _is_valid_event(self, title: str) -> bool:
         """使用中文标题判断是否为有效活动公告"""

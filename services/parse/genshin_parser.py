@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 class GenshinParser:
     """原神(Genshin Impact)公告解析器（优化版）"""
 
-    def __init__(self, debug=False):
+    def __init__(self, debug=True):
         self.version_now = "1.0"
         self.version_begin_time = ""
         self.supported_languages = ["zh-cn", "zh-tw", "en", "ja", "ko"]
@@ -375,65 +375,6 @@ class GenshinParser:
                     return announcement
         return None
 
-    def _get_time_from_zh_content(
-        self, announcement: Dict, zh_content: Dict
-    ) -> Tuple[str, str]:
-        """从中文公告内容中提取时间信息"""
-        if not zh_content or not isinstance(zh_content, dict):
-            self._debug_print("无中文内容或内容格式错误")
-            return "", ""
-
-        # 获取公告中的时间
-        start_time = self._timestamp_to_datetime(announcement.get("start_time", ""))
-        end_time = self._timestamp_to_datetime(announcement.get("end_time", ""))
-        self._debug_print(f"公告原始时间: {start_time} 至 {end_time}")
-
-        # 尝试从中文内容中提取更准确的时间
-        if "content" in zh_content:
-            self._debug_print("尝试从中文HTML内容中提取时间")
-            soup = BeautifulSoup(zh_content["content"], "html.parser")
-
-            # 查找时间表格
-            time_table = soup.find("table")
-            if time_table:
-                self._debug_print("找到时间表格")
-                rows = time_table.find_all("tr")
-                if len(rows) >= 2:
-                    time_row = rows[1]
-                    cells = time_row.find_all("td")
-                    if len(cells) >= 2:
-                        time_range = cells[1].get_text(strip=True)
-                        self._debug_print(f"从表格中提取的时间范围: {time_range}")
-
-                        if "~" in time_range:
-                            content_start = time_range.split("~")[0].strip()
-                            content_end = time_range.split("~")[1].strip()
-                            self._debug_print(
-                                f"拆分时间: 开始={content_start}, 结束={content_end}"
-                            )
-
-                            # 如果内容时间包含版本号，使用版本开始时间
-                            if f"{self.version_now}版本" in content_start:
-                                self._debug_print(
-                                    "检测到版本时间引用，使用版本开始时间"
-                                )
-                                parsed_start = self.version_begin_time
-                            else:
-                                parsed_start = self._parse_content_time(content_start)
-
-                            parsed_end = self._parse_content_time(content_end)
-
-                            if parsed_start:
-                                start_time = parsed_start
-                                self._debug_print(f"更新开始时间为: {start_time}")
-                            if parsed_end:
-                                end_time = parsed_end
-                                self._debug_print(f"更新结束时间为: {end_time}")
-            else:
-                self._debug_print("未找到时间表格")
-
-        return start_time, end_time
-
     def _parse_gacha_content(self, zh_title: str, zh_content: Dict) -> str:
         """使用中文内容解析祈愿公告并生成标准化标题"""
         if not zh_content or not isinstance(zh_content, dict):
@@ -576,6 +517,157 @@ class GenshinParser:
         """移除HTML标签"""
         clean = re.compile("<.*?>")
         return re.sub(clean, "", text).strip()
+
+    def _extract_event_start_time(self, html_content: str) -> str:
+        """从活动公告HTML内容中提取开始时间"""
+        if not html_content:
+            return ""
+
+        # 检查是否有"版本更新后"的特殊情况
+        if "版本更新后" in html_content:
+            return self.version_begin_time
+
+        # 尝试直接匹配时间格式 "2023/11/15 10:00"
+        time_pattern = r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}"
+        match = re.search(time_pattern, html_content)
+        if match:
+            return self._format_extracted_time(match.group())
+
+        # 使用BeautifulSoup解析HTML
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        # 查找包含"〓获取奖励时限〓"或"〓活动时间〓"的标签
+        time_title = soup.find(string="〓获取奖励时限〓") or soup.find(
+            string="〓活动时间〓"
+        )
+        if time_title:
+            time_paragraph = time_title.find_next("p")
+            if time_paragraph:
+                time_range = time_paragraph.get_text()
+                if "~" in time_range:
+                    start_time = time_range.split("~")[0].strip()
+                    return self._format_extracted_time(
+                        self._remove_html_tags(start_time)
+                    )
+                return self._format_extracted_time(self._remove_html_tags(time_range))
+
+        return ""
+
+    def _extract_gacha_start_time(
+        self, html_content: str, is_collection: bool = False
+    ) -> str:
+        """从祈愿公告HTML内容中提取开始时间"""
+        if not html_content:
+            return ""
+
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        if is_collection:
+            # 集录祈愿的特殊处理
+            time_td = soup.find("td", {"rowspan": lambda x: x and int(x) >= 3})
+            if time_td:
+                time_tag = time_td.find("t", {"class": "t_lc"})
+                if time_tag:
+                    return self._format_extracted_time(time_tag.text)
+
+                time_text = time_td.get_text()
+                time_match = re.search(r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}", time_text)
+                if time_match:
+                    return self._format_extracted_time(time_match.group())
+        else:
+            # 常规祈愿处理
+            for rowspan in ["3", "5", "9"]:
+                td_element = soup.find("td", {"rowspan": rowspan})
+                if td_element:
+                    time_texts = []
+                    for child in td_element.children:
+                        if child.name in ["p", "t"]:
+                            span = child.find("span")
+                            time_texts.append(
+                                span.get_text() if span else child.get_text()
+                            )
+
+                    if time_texts:
+                        time_range = " ".join(time_texts)
+                        if "~" in time_range:
+                            return self._format_extracted_time(
+                                time_range.split("~")[0].strip()
+                            )
+                        return self._format_extracted_time(time_range)
+
+        return ""
+
+    def _format_extracted_time(self, time_str: str) -> str:
+        """格式化提取到的时间字符串"""
+        if not time_str:
+            return ""
+
+        # 处理"版本更新后"的特殊情况
+        if f"{self.version_now}版本" in time_str or "版本更新后" in time_str:
+            return self.version_begin_time
+
+        try:
+            # 统一处理各种时间格式
+            time_str = time_str.replace("年", "/").replace("月", "/").replace("日", "")
+            time_str = re.sub(r"[^\d/ :]", "", time_str).strip()
+
+            # 尝试解析格式 "2023/11/15 10:00"
+            if time_str[-1:] == "/":
+                time_str = time_str[:-1]
+            date_obj = datetime.strptime(time_str, "%Y/%m/%d %H:%M")
+            return date_obj.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            self._debug_print(f"时间格式解析失败: {time_str}")
+            return ""
+
+    def _get_time_from_zh_content(
+        self, announcement: Dict, zh_content: Dict
+    ) -> Tuple[str, str]:
+        """从中文公告内容中提取时间信息"""
+        if not zh_content or not isinstance(zh_content, dict):
+            return "", ""
+
+        # 获取公告中的原始时间
+        start_time = self._timestamp_to_datetime(announcement.get("start_time", ""))
+        end_time = self._timestamp_to_datetime(announcement.get("end_time", ""))
+
+        # 从HTML内容中提取更准确的时间
+        if "content" in zh_content:
+            html_content = zh_content["content"]
+
+            # 判断是否是祈愿公告
+            is_gacha = announcement.get(
+                "tag_label"
+            ) == "扭蛋" or "祈愿" in zh_content.get("title", "")
+            is_collection = "集录" in zh_content.get("title", "")
+
+            if is_gacha:
+                extracted_time = self._extract_gacha_start_time(
+                    html_content, is_collection
+                )
+            else:
+                extracted_time = self._extract_event_start_time(html_content)
+
+            if extracted_time:
+                start_time = extracted_time
+
+                # 对于活动公告，尝试提取结束时间
+                if not is_gacha:
+                    soup = BeautifulSoup(html_content, "html.parser")
+                    time_title = soup.find(string="〓获取奖励时限〓") or soup.find(
+                        string="〓活动时间〓"
+                    )
+                    if time_title:
+                        time_paragraph = time_title.find_next("p")
+                        if time_paragraph and "~" in time_paragraph.get_text():
+                            end_time_part = (
+                                time_paragraph.get_text().split("~")[1].strip()
+                            )
+                            end_time = self._format_extracted_time(
+                                self._remove_html_tags(end_time_part)
+                            )
+
+        return start_time, end_time
 
 
 # 使用示例
