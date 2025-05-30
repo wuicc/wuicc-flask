@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 class StarRailParser:
     """崩坏：星穹铁道(Star Rail)公告解析器（国际化版）"""
 
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         self.version_now = "1.0"
         self.version_begin_time = ""
         self.supported_languages = ["zh-cn", "zh-tw", "en", "ja", "ko"]

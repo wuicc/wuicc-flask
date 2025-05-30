@@ -15,7 +15,7 @@ from ann_model import get_announcement_model, get_refresh_record_model
 class AnnouncementService:
     """公告服务类，负责获取、解析和存储公告数据"""
 
-    def __init__(self, debug: bool = True):
+    def __init__(self, debug: bool = False):
         # 缓存结构: {cache_key: (data, expiration_time)}
         self._cache: Dict[str, Tuple[Any, datetime]] = {}
         self._cache_ttl = timedelta(hours=1)  # 默认缓存1小时
@@ -36,7 +36,7 @@ class AnnouncementService:
 
         # 配置日志
         self._setup_logging()
-        self._log("AnnouncementService initialized", level="info")
+        self._log("AnnouncementService initialized", level="detail")
         self._cache = {}  # 内存缓存
         self._debug = debug  # 调试开关
         self._mihoyo_fetcher = MihoyoFetcher()
@@ -48,7 +48,7 @@ class AnnouncementService:
 
         # 配置日志
         self._setup_logging()
-        self._log("AnnouncementService initialized", level="info")
+        self._log("AnnouncementService initialized", level="detail")
 
     def _setup_logging(self):
         """配置日志系统"""
@@ -69,6 +69,8 @@ class AnnouncementService:
         """统一的日志记录方法"""
         if not self._debug and level == "debug":
             return
+        if not self._debug and level == "detail":
+            return
 
         log_method = getattr(self.logger, level, self.logger.info)
         log_method(message)
@@ -77,7 +79,7 @@ class AnnouncementService:
         """从ann_link.json加载公告链接"""
         try:
             with open("data/ann_link.json", "r", encoding="utf-8") as f:
-                self._log("Successfully loaded announcement links", "info")
+                self._log("Successfully loaded announcement links", "detail")
                 return json.load(f)
         except Exception as e:
             self._log(f"Error loading announcement links: {e}", "error")
@@ -180,7 +182,7 @@ class AnnouncementService:
         updated_count = 0
 
         for ann in announcements:
-            ann_id = str(ann.get("ann_id"))
+            ann_id = str(ann.get("ann_id") or ann.get("official_id", ""))
             existing_ann = existing_announcements.get(ann_id)
 
             # 转换时间格式
@@ -196,7 +198,7 @@ class AnnouncementService:
                     return None
 
             announcement_data = {
-                "official_id": ann.get("ann_id", ""),
+                "official_id": ann.get("ann_id", "") or ann.get("official_id", ""),
                 "title": ann.get("title", ""),
                 "content": ann.get("content", ""),
                 "banner_img": ann.get("bannerImage", ""),
@@ -232,30 +234,30 @@ class AnnouncementService:
             db.session.commit()
             self._log(
                 f"Added {len(new_announcements)} new and updated {updated_count} existing announcements for {game_id} {lang}",
-                "info",
+                "detail",
             )
         except Exception as e:
             db.session.rollback()
             self._log(f"Error saving announcements for {game_id} {lang}: {e}", "error")
 
-    def _fetch_genshin_announcements(self, lang: str) -> List[Dict]:
-        """获取原神公告数据"""
-        try:
-            self._log(f"Fetching Genshin announcements for {lang}", "debug")
-            raw_data = self._mihoyo_fetcher.fetch_game_announcements("genshin", lang)
-            if not raw_data:
-                self._log("No data fetched from Genshin API", "warning")
-                raise ValueError("No data fetched from Genshin API")
+    # def _fetch_genshin_announcements(self, lang: str) -> List[Dict]:
+    #     """获取原神公告数据"""
+    #     try:
+    #         self._log(f"Fetching Genshin announcements for {lang}", "debug")
+    #         raw_data = self._mihoyo_fetcher.fetch_game_announcements("genshin", lang)
+    #         if not raw_data:
+    #             self._log("No data fetched from Genshin API", "warning")
+    #             raise ValueError("No data fetched from Genshin API")
 
-            parsed_data = self._genshin_parser.parse(raw_data, lang)
-            self._log(
-                f"Successfully parsed {len(parsed_data)} Genshin announcements for {lang}",
-                "debug",
-            )
-            return parsed_data
-        except Exception as e:
-            self._log(f"Error fetching Genshin announcements: {e}", "error")
-            return []
+    #         parsed_data = self._genshin_parser.parse(raw_data, lang)
+    #         self._log(
+    #             f"Successfully parsed {len(parsed_data)} Genshin announcements for {lang}",
+    #             "debug",
+    #         )
+    #         return parsed_data
+    #     except Exception as e:
+    #         self._log(f"Error fetching Genshin announcements: {e}", "error")
+    #         return []
 
     def get_announcements(
         self, game_id: str, lang: str, force_refresh: bool = False
@@ -295,25 +297,26 @@ class AnnouncementService:
             self.clear_cache(game_id, lang)
             self._log("🗑️ 已清除缓存（强制刷新模式）", "debug")
 
-        # === 3. 尝试从缓存获取 ===
-        cached_data = self._get_from_cache(cache_key)
-        if cached_data is not None and not force_refresh:
-            self._log(f"💾 使用缓存数据（{len(cached_data)}条公告）", "debug")
-            self._log_cache_stats()  # 调试统计
-            return cached_data
-
-        # === 4. 检查是否需要刷新 ===
+        # === 3. 检查是否需要刷新 ===
         need_refresh = force_refresh or self._should_refresh(game_id, lang)
         self._log(
             f"🔄 刷新检查结果: {'需要刷新' if need_refresh else '使用现有数据'}",
             "debug",
         )
 
+        # === 4. 尝试从缓存获取 ===
+        if not need_refresh:
+            cached_data = self._get_from_cache(cache_key)
+            if cached_data is not None and not force_refresh:
+                self._log(f"💾 使用缓存数据（{len(cached_data)}条公告）", "debug")
+                self._log_cache_stats()  # 调试统计
+                return cached_data
+
         # === 5. 需要刷新时的处理 ===
         announcements = []
         if need_refresh:
             try:
-                self._log("⏳ 正在从API获取最新公告...", "info")
+                self._log("⏳ 正在从API获取最新公告...", "detail")
 
                 # 根据游戏类型调用不同的获取方法
                 if game_id == "genshin":
@@ -328,12 +331,12 @@ class AnnouncementService:
                     raise ValueError(f"未知游戏ID: {game_id}")
 
                 if announcements:
-                    self._log(f"✅ 获取到 {len(announcements)} 条新公告", "info")
+                    self._log(f"✅ 获取到 {len(announcements)} 条新公告", "detail")
                     # 存储到数据库
                     self._store_announcements(game_id, lang, announcements)
                     self._update_refresh_time(game_id, lang, True)
                     # 更新缓存
-                    self._set_to_cache(cache_key, announcements)
+                    # self._set_to_cache(cache_key, announcements)
                 else:
                     self._log("⚠️ 从API获取到空公告列表", "warning")
 
@@ -342,11 +345,12 @@ class AnnouncementService:
                 need_refresh = False  # 失败时降级使用现有数据
 
         # === 6. 从数据库获取数据（刷新失败或不需要刷新时） ===
-        if not need_refresh or not announcements:
-            self._log("⏳ 从数据库加载公告...", "debug")
-            announcements = self._get_from_database(game_id, lang)
-            if announcements:
-                self._set_to_cache(cache_key, announcements)  # 缓存数据库查询结果
+        # if not need_refresh or not announcements:
+        # if not announcements:
+        self._log("⏳ 从数据库加载公告...", "debug")
+        announcements = self._get_from_database(game_id, lang)
+        if announcements:
+            self._set_to_cache(cache_key, announcements)  # 缓存数据库查询结果
 
         # === 7. 最终处理 ===
         if not announcements:
@@ -363,7 +367,7 @@ class AnnouncementService:
 
     def refresh_all_games(self):
         """刷新所有游戏的公告数据"""
-        self._log("Starting refresh_all_games operation", "info")
+        self._log("Starting refresh_all_games operation", "detail")
         games = Game.query.filter_by(enabled=1).all()
         self._log(f"Found {len(games)} enabled games to refresh", "debug")
 

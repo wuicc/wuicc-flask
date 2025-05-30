@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 class GenshinParser:
     """原神(Genshin Impact)公告解析器（优化版）"""
 
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         self.version_now = "1.0"
         self.version_begin_time = ""
         self.supported_languages = ["zh-cn", "zh-tw", "en", "ja", "ko"]

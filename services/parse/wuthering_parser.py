@@ -166,7 +166,7 @@ class WutheringParser:
         # 转换时间格式
         start_time = self._timestamp_to_datetime(version_ann.get("startTimeMs", 0))
         end_time = self._timestamp_to_datetime(version_ann.get("endTimeMs", 0))
-
+        # print(version_ann.get("id", "no_id!"), version_ann)
         parsed = {
             "official_id": version_ann.get("id", ""),
             "title": f"{self.version_now}" if lang == "zh-Hans" else title,
